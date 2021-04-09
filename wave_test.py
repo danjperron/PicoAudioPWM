@@ -7,7 +7,7 @@
     8000 sample rate , stereo and 16 bits
     
     GPIO pin 14 and 15 are the output
-    you need to use head phone with a 1K resistor in series on
+    You need to use headphone with a 1K resistor in series on
     left and right speaker
     
     The myPWM subclass set the maximum count to 255 at a frequency around  122.5KHz.
@@ -20,7 +20,7 @@
     
     How it works,
     
-       1 - We set the PWM  to a range of 255 at 122Khz
+       1 - We set the PWM  to a range of 255, 1023 for 10 bits, at 122Khz
        2 - We read the wave file using the class wave which will set the sample rate and read the audio data by chunk
        3 - Each chunk are converted to  16 bit signed to  unsigned char with the middle at 128
        4 - Wait for the DMA to be completed.  On first it will be anyway.
@@ -43,7 +43,7 @@ from machine import Pin
 usePWM_10Bits = True
 
 if usePWM_10Bits:
-    PWM_DIVIDER = 2
+    PWM_DIVIDER = 1
     PWM_TOP = 1023
     PWM_HALF = 512
     PWM_CONVERSION = 64
@@ -64,7 +64,6 @@ pwm_even.duty(PWM_HALF)
 pwm_odd = myPWM(Pin(15),divider=PWM_DIVIDER,top=PWM_TOP)
 pwm_odd.duty(PWM_HALF)
 
-utime.sleep(1)
 
 # open Audio file and get information
 audioFile='fines22.wav'
