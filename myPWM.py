@@ -10,7 +10,7 @@ class  myPWM(PWM):
         self.top = top
         
         super().__init__(pin)
-        super().freq(500_000)
+        super().freq(122_000)
         super().duty_u16(32768)
         # set memory base
         self.PWM_BASE = 0x4005_0000 + (self.channel * 0x14)
@@ -29,7 +29,8 @@ class  myPWM(PWM):
         #mem32[self.PWM_DIV] =  8 << 4
         mem32[self.PWM_DIV] =  self.divider << 4
         # set top to 255
-        mem32[self.PWM_TOP] =  self.top   
+        mem32[self.PWM_TOP] =  self.top
+        self.duty(self.top // 2)
         
     def duty(self, value):
         if value > self.top:

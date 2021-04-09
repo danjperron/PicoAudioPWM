@@ -14,16 +14,24 @@ class myDMA:
         self.TRANS_COUNT = self.DMA_CH_BASE + 8
         self.CTRL_TRIG = self.DMA_CH_BASE + 12
         self.MULTI_TRIG = self.DMA_BASE + 0x430
+        self.CHAIN_ABORT = self.DMA_BASE + 0x444
+        self.ALIAS_CTRL  = self.DMA_CH_BASE + 12
         self.timer_channel = timer
+        self.clock_MUL= clock_MUL
+        self.clock_DIV = clock_DIV
+
         if self.timer_channel is None:
             self.TIMER = None
         else:
             self.TIMER = self.DMA_BASE + 0x420 + ( 4 * self.timer_channel)
-        self.clock_MUL= clock_MUL
-        self.clock_DIV = clock_DIV
+            mem32[self.TIMER]= self.clock_MUL << 16 | self.clock_DIV
+        
+        mem32[self.CTRL_TRIG] = 0
+        mem32[self.CHAIN_ABORT] = 1 << self.channel 
+
+
 
     def  move(self, src_add, dst_add,count,data_size=1,src_inc=True, dst_inc=True):
-
         if data_size == 1 :
            DATA_SIZE = 0
         elif data_size == 2:
@@ -32,10 +40,10 @@ class myDMA:
            DATA_SIZE = 2
         else:
             return False
-
+        
+    
         mem32[self.CTRL_TRIG] = 0
-#        mem32[self.WRITE_ADDR] = uctypes.addressof(dst)
-#        mem32[self.READ_ADDR] = uctypes.addressof(src)
+        mem32[self.CHAIN_ABORT] = 1 << self.channel 
         mem32[self.WRITE_ADDR] = dst_add
         mem32[self.READ_ADDR] =  src_add
         mem32[self.TRANS_COUNT] = count // data_size
@@ -45,10 +53,7 @@ class myDMA:
         if self.timer_channel is None:
             ctrl += (0x3f << 15)
         else:
-            mem32[self.TIMER]= self.clock_MUL << 16 | self.clock_DIV
             ctrl += ((0x3b + self.timer_channel) << 15)
-
-            
             
         ctrl += (self.channel << 11)
 
@@ -57,16 +62,15 @@ class myDMA:
         if dst_inc:
             ctrl += 0x20
         mem32[self.CTRL_TRIG] = ctrl
-        
-        
+
+ 
+
         
     def isBusy(self):
             flag = mem32[self.CTRL_TRIG]
-            if ( flag & 0x8000_0000) == 0x8000_0000:
-                mem32[self.CTRL_TRIG] = 0
+            if (flag & 0x80000000) !=  0:
                 return False
             if (flag & ( 1<<24)) == 0:
-                mem32[self.CTRL_TRIG] = 0
                 return False
             return True
             
