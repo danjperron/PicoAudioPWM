@@ -38,13 +38,35 @@ from myDMA import myDMA
 from myPWM import myPWM
 from machine import Pin
 
-# set  PWM to a full range of 0..255 at 122Khz
-pwm_even = myPWM(Pin(14),divider=4,top=255)
-# set PWM output in center 
 
-pwm_odd = myPWM(Pin(15),divider=4,top=255)
-pwm_even.duty(128)
-pwm_odd.duty(128)
+
+usePWM_10Bits = True
+
+if usePWM_10Bits:
+    PWM_DIVIDER = 2
+    PWM_TOP = 1023
+    PWM_HALF = 512
+    PWM_CONVERSION = 64
+else:
+    # force 8 bit
+    PWM_DIVIDER = 4
+    PWM_TOP = 255
+    PWM_HALF = 128
+    PWM_CONVERSION = 256
+
+
+
+# set  PWM to a full range of 0..255 at 122Khz
+#pwm_even = myPWM(Pin(14),divider=4,top=255)
+#pwm_even.duty(128)
+pwm_even = myPWM(Pin(14),divider=PWM_DIVIDER,top=PWM_TOP)
+pwm_even.duty(PWM_HALF)
+
+# set PWM output in center 
+#pwm_odd = myPWM(Pin(15),divider=4,top=255)
+#pwm_odd.duty(128)
+pwm_odd = myPWM(Pin(15),divider=PWM_DIVIDER,top=PWM_TOP)
+pwm_odd.duty(PWM_HALF)
 
 utime.sleep(1)
 
@@ -54,9 +76,14 @@ audioFile='fines22.wav'
 f = wave.open(audioFile,'rb')
 
 rate = f.getframerate()
-bytes = f.getsampwidth() 
+bytesDepth = f.getsampwidth() 
 channels = f.getnchannels()
 frameCount = f.getnframes()
+
+print("rate",rate)
+print("byte depth",bytesDepth)
+print("channels",channels)
+print("# of frames",frameCount)
 
 
 # Set DMA channel and timer rate
@@ -86,7 +113,9 @@ while frameLeft>0:
     nbData = nbFrame * 2
     s = f.readframes(nbFrame)
     value = struct.unpack('hh'*(nbFrame),s)
-    value = [ 128 + (i // 256) for i in value]
+    #value = [ 128 + (i // 256) for i in value]
+    value = [PWM_HALF + (i // PWM_CONVERSION) for i in value]
+
     if toggle:
         V1 = struct.pack('hh'*nbFrame,*value)
         # check if previous DMA is done    
@@ -110,7 +139,9 @@ while frameLeft>0:
 
 f.close()    
 
-pwm_even.duty(128)
-pwm_odd.duty(128)
+#pwm_even.duty(128)
+#pwm_odd.duty(128)
+pwm_even.duty(PWM_HALF)
+pwm_odd.duty(PWM_HALF)
 
     
