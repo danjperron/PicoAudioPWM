@@ -1,5 +1,5 @@
 # PicoAudioPWM
-PWM audio on pico with 8KHz stereo wave file
+PWM audio on pico with 8KHz up to 22KHz stereo wave file
 
     example of audio output using PWM and DMA
     right now it  works only with wave file at
