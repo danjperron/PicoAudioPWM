@@ -11,7 +11,7 @@ PWM audio on pico with 8KHz stereo wave file
     
     The myPWM subclass set the maximum count to 255 at a frequency around  122.5KHz.
     
-    The myDMA class allow to use direct memory access to transfer each frame at the current sample rate
+    The myDMA class allows to use direct memory access to transfer each frame at the current sample rate
     
     
     You need to install the wave.py and chunk.py  from
