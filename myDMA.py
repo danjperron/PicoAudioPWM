@@ -4,7 +4,7 @@ import uctypes
 
 class myDMA:
     
-    def __init__(self, channel,timer=None, clock_MUL=1, clock_DIV=1):
+    def __init__(self, channel,timer=None, clock_MUL=None, clock_DIV=None):
         self.channel = channel
         self.timer = timer
         self.DMA_BASE = 0x50000000
@@ -24,7 +24,8 @@ class myDMA:
             self.TIMER = None
         else:
             self.TIMER = self.DMA_BASE + 0x420 + ( 4 * self.timer_channel)
-            mem32[self.TIMER]= self.clock_MUL << 16 | self.clock_DIV
+            if not( self.clock_DIV is None  or self.clock_MUL is None):
+                mem32[self.TIMER]= self.clock_MUL << 16 | self.clock_DIV
         
         mem32[self.CTRL_TRIG] = 0
         mem32[self.CHAIN_ABORT] = 1 << self.channel 

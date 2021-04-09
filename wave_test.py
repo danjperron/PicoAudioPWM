@@ -56,15 +56,11 @@ else:
 
 
 
-# set  PWM to a full range of 0..255 at 122Khz
-#pwm_even = myPWM(Pin(14),divider=4,top=255)
-#pwm_even.duty(128)
+# set  PWM to a full range of 0..255 or (0.1023) for 10 bits at 122Khz
 pwm_even = myPWM(Pin(14),divider=PWM_DIVIDER,top=PWM_TOP)
+# set PWM output in center 
 pwm_even.duty(PWM_HALF)
 
-# set PWM output in center 
-#pwm_odd = myPWM(Pin(15),divider=4,top=255)
-#pwm_odd.duty(128)
 pwm_odd = myPWM(Pin(15),divider=PWM_DIVIDER,top=PWM_TOP)
 pwm_odd.duty(PWM_HALF)
 
@@ -90,16 +86,15 @@ print("# of frames",frameCount)
 # the divider set the rate at 2Khz (125Mhz//62500)
 # The multiplier  use the sample rate to adjust it correctly
 dma0 = myDMA(10,timer=3,clock_MUL= rate // 2000, clock_DIV=62500) 
-dma1 = myDMA(11,timer=3,clock_MUL= rate // 2000, clock_DIV=62500) 
+dma1 = myDMA(11,timer=3)  # don't need to set  timer clock
 
 # specify number of frame per chunk
 nbFrame=2048
 
 #create a byte array to hold the data for DMA
 # 2 channels 16 bits
-# the LSB hold the audio value
-# the MSB is always zero  since it is for the PWM
 
+# need to alternate DMA buffer
 toggle = True
 
 
@@ -113,7 +108,6 @@ while frameLeft>0:
     nbData = nbFrame * 2
     s = f.readframes(nbFrame)
     value = struct.unpack('hh'*(nbFrame),s)
-    #value = [ 128 + (i // 256) for i in value]
     value = [PWM_HALF + (i // PWM_CONVERSION) for i in value]
 
     if toggle:
@@ -139,8 +133,6 @@ while frameLeft>0:
 
 f.close()    
 
-#pwm_even.duty(128)
-#pwm_odd.duty(128)
 pwm_even.duty(PWM_HALF)
 pwm_odd.duty(PWM_HALF)
 
