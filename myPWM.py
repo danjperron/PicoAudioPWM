@@ -45,7 +45,7 @@ class  myPWM(PWM):
             
 if __name__ == "__main__":
     import utime
-    pwm = HD_PWM(Pin(15))
+    pwm = myPWM(Pin(15))
     try:
         value = 0
         increment = 1
