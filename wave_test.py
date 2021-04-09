@@ -87,7 +87,7 @@ while frameLeft>0:
         audioFrames[audioIdx+2] = 128 + (value[1] // 256)
         audioIdx+=4
         
-    # check is previous DMA is done    
+    # check if previous DMA is done    
     while dma.isBusy():
          pass
     # Start DMA with the new audio data
