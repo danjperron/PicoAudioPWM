@@ -6,7 +6,7 @@
     right now it  works only with wave file at
     8000 sample rate , stereo and 16 bits
     
-    GPIO pin 14 and 15 are the output
+    GPIO  2 & 3  pin 4 and 5 are the output
     You need to use headphone with a 1K resistor in series on
     left and right speaker
     
@@ -34,9 +34,18 @@ import uctypes
 import struct
 import array
 import utime
+import uos
+import SDCard
 from myDMA import myDMA
 from myPWM import myPWM
 from machine import Pin
+
+
+# mount SDCard
+from machine import SPI,Pin
+sd = SDCard.SDCard(SPI(1),Pin(13))
+uos.mount(sd,"/sd")
+
 
 
 
@@ -57,16 +66,16 @@ else:
 
 
 # set  PWM to a full range of 0..255 or (0.1023) for 10 bits at 122Khz
-pwm_even = myPWM(Pin(14),divider=PWM_DIVIDER,top=PWM_TOP)
+pwm_even = myPWM(Pin(2),divider=PWM_DIVIDER,top=PWM_TOP)
 # set PWM output in center 
 pwm_even.duty(PWM_HALF)
 
-pwm_odd = myPWM(Pin(15),divider=PWM_DIVIDER,top=PWM_TOP)
+pwm_odd = myPWM(Pin(3),divider=PWM_DIVIDER,top=PWM_TOP)
 pwm_odd.duty(PWM_HALF)
 
 
 # open Audio file and get information
-audioFile='fines22.wav'
+audioFile='/sd/Luke16.wav'
 
 f = wave.open(audioFile,'rb')
 
@@ -87,10 +96,6 @@ print("# of frames",frameCount)
 dma0 = myDMA(10,timer=3,clock_MUL= rate // 2000, clock_DIV=62500) 
 dma1 = myDMA(11,timer=3)  # don't need to set  timer clock
 
-# setup Ctrl
-dma0.setCtrl(data_size=4,dst_inc=False)
-dma1.setCtrl(data_size=4,dst_inc=False)
-
 # specify number of frame per chunk
 nbFrame=2048
 
@@ -103,6 +108,9 @@ toggle = True
 
 # loop until is done
 frameLeft = frameCount
+#setup DMA
+dma0.setCtrl(src_inc=True, dst_inc=False,data_size=4)
+dma1.setCtrl(src_inc=True, dst_inc=False,data_size=4)
 
 while frameLeft>0:
     # first DMA
@@ -115,23 +123,21 @@ while frameLeft>0:
 
     if toggle:
         V1 = struct.pack('hh'*nbFrame,*value)
-        dma1.move(uctypes.addressof(V1),pwm_even.PWM_CC,nbFrame*4)
-        # check if previous DMA is done
-        while dma0.isBusy():
-             pass
-        # Start DMA with the new audio data
+        # setup DMA with the new audio data
         # the destination is the register address of the odd and even PWM set count
         # this is why the destination increment is false.
+        dma1.move(uctypes.addressof(V1),pwm_even.PWM_CC,nbFrame*4,enable=False)
+        # check if previous DMA is done    
+        while dma0.isBusy():
+             pass
+        # start DMA
         dma1.enable()
     else:
         V0 = struct.pack('hh'*nbFrame,*value)
-        dma0.move(uctypes.addressof(V0),pwm_even.PWM_CC,nbFrame*4)
+        dma0.move(uctypes.addressof(V0),pwm_even.PWM_CC,nbFrame*4,enable=False)
         # check if previous DMA is done    
         while dma1.isBusy():
              pass
-        # Start DMA with the new audio data
-        # the destination is the register address of the odd and even PWM set count
-        # this is why the destination increment is false.
         dma0.enable()
     toggle = not toggle
     frameLeft -= nbFrame

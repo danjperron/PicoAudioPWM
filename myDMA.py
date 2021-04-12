@@ -30,42 +30,48 @@ class myDMA:
         mem32[self.CTRL_TRIG] = 0
         mem32[self.CHAIN_ABORT] = 1 << self.channel 
 
+    def enable(self):
+        mem32[self.CTRL_TRIG | 0x2000]= 1
 
-
-    def  move(self, src_add, dst_add,count,data_size=1,src_inc=True, dst_inc=True):
-        if data_size == 1 :
-           DATA_SIZE = 0
-        elif data_size == 2:
+    def pause(self):
+        mem32[self.CTRL_TRIG | 0x3000]= 1
+        
+        
+     
+     
+    def setCtrl(self, src_inc=True, dst_inc=True,data_size=1):
+        self.data_size=data_size
+        DATA_SIZE = 0
+        if data_size == 2:
            DATA_SIZE = 1
         elif data_size == 4:
            DATA_SIZE = 2
-        else:
-            return False
-        
-    
-        mem32[self.CTRL_TRIG] = 0
-        mem32[self.CHAIN_ABORT] = 1 << self.channel 
-        mem32[self.WRITE_ADDR] = dst_add
-        mem32[self.READ_ADDR] =  src_add
-        mem32[self.TRANS_COUNT] = count // data_size
-        ctrl = 1
+        ctrl = 0
         ctrl += (DATA_SIZE << 2)
         
         if self.timer_channel is None:
             ctrl += (0x3f << 15)
         else:
             ctrl += ((0x3b + self.timer_channel) << 15)
-            
+        # chain to
         ctrl += (self.channel << 11)
-
         if src_inc:
             ctrl += 0x10
         if dst_inc:
             ctrl += 0x20
-        mem32[self.CTRL_TRIG] = ctrl
-
- 
-
+        self.ctrl = ctrl
+        
+     
+    def move(self, src_add, dst_add,count,enable=True):
+        #        mem32[self.CTRL_TRIG] = 0
+        #        mem32[self.CHAIN_ABORT] = 1 << self.channel 
+        mem32[self.WRITE_ADDR] = dst_add
+        mem32[self.READ_ADDR] =  src_add
+        mem32[self.TRANS_COUNT] = count // self.data_size
+        #/if enable:
+        mem32[self.CTRL_TRIG] = self.ctrl
+        #else:
+        #         mem32[self.CTRL_TRIG] = self.ctrl & 0xfffffffe
         
     def isBusy(self):
             flag = mem32[self.CTRL_TRIG]
