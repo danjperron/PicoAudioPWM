@@ -122,6 +122,9 @@ class wavePlayer:
     def stop(self):
         self.dma0.abort()
         self.dma1.abort()
+        self.leftPWM.duty(self.PWM_HALF)
+        self.rightPWM.duty(self.PWM_HALF)
+
 
     def play(self,filename):
         # open Audio file and get information
@@ -200,8 +203,8 @@ class wavePlayer:
                 pass
             self.dma1.pause()
         f.close()    
-        pwm_even.duty(self.PWM_HALF)
-        pwm_odd.duty(self.PWM_HALF)
+        self.leftPWM.duty(self.PWM_HALF)
+        self.rightPWM.duty(self.PWM_HALF)
 
 
 if __name__ == "__main__":
