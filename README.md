@@ -22,13 +22,13 @@ PWM audio on pico with 8KHz up to 44.1KHz stereo wave file
     
        1 - We set the PWM to a range of 255 at 122Khz
        2 - We read the wave file using the class wave which will set the 
-sample rate and read the audio data by chunk
+           sample rate and read the audio data by chunk
        3 - Each chunk are converted to 16 bit signed to unsigned char 
-with the middle at 128, (512 for 10 bits)
+           with the middle at 128, (512 for 10 bits)
        4 - Wait for the DMA to be completed.  On first it will be 
-anyway.
+           anyway.
        4 - The converted chunk is then pass to the DMA to be transfer at 
-the sample rate using one of build in timer
+           the sample rate using one of build in timer
        6 - Go on step 2 until is done.
        
     P.S. to transfer wave file use rshell.
