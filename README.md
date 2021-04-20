@@ -27,7 +27,7 @@ PWM audio on pico with 8KHz up to 44.1KHz stereo wave file
            with the middle at 128, (512 for 10 bits)
        4 - Wait for the DMA to be completed.  On first it will be 
            anyway.
-       4 - The converted chunk is then pass to the DMA to be transfer at 
+       5 - The converted chunk is then pass to the DMA to be transfer at 
            the sample rate using one of build in timer
        6 - Go on step 2 until is done.
        
