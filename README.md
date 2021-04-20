@@ -1,8 +1,7 @@
 # PicoAudioPWM
-PWM audio on pico with 8KHz up to 22KHz stereo wave file
-    example of audio output using PWM and DMA
-    right now it works only with wave file at
-    8000 and up to 22000 sample rate , stereo and 16 bits
+PWM audio on pico with 8KHz up to 44.1KHz stereo wave file
+    example of audio output using PWM 10 bits and DMA
+    The wave file needs to be stereo and 16 bits.
     
     GPIO pin 14 and 15 are the output
     you need to use head phone with a 1K resistor in series on
