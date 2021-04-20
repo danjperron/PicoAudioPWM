@@ -102,9 +102,6 @@ class wavePlayer:
             self.PWM_TOP = 255
             self.PWM_HALF = 128
 
-        global PWM_DIVIDER
-        global PWM_TOP
-        global PWM_HALF
         self.leftPin=leftPin
         self.rightPin=rightPin
         
@@ -220,7 +217,7 @@ if __name__ == "__main__":
     player = wavePlayer()
 
     try:
-        #wave files needs to be stereo
+        # the wave file needs to be stereo and 16 bits
         player.play("/sd/Luke44.wav")
     except KeyboardInterrupt:
         player.stop()
