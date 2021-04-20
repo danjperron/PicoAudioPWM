@@ -7,8 +7,8 @@ PWM audio on pico with 8KHz up to 44.1KHz stereo wave file
     you need to use head phone with a 1K resistor in series on
     left and right speaker
     
-    The myPWM subclass set the maximum count to 255 at a frequency 
-around 122.5KHz.
+    The myPWM subclass set the maximum count to 255(8 bits)  or 1023(10bits)  at a frequency 
+    around 122.5KHz.
     
     ** the PWM is now on 10 bits (0..1023)
     
