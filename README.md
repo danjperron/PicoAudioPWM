@@ -12,8 +12,7 @@ PWM audio on pico with 8KHz up to 44.1KHz stereo wave file
     
     ** the PWM is now on 10 bits (0..1023)
     
-    The myDMA class allows to use direct memory access to transfer each 
-frame at the current sample rate
+    The myDMA class allows to use direct memory access to transfer each frame at the current sample rate
     
     
     You need to install the wave.py and chunk.py from
