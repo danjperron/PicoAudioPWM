@@ -15,7 +15,7 @@ class myDMA:
         self.CTRL_TRIG = self.DMA_CH_BASE + 12
         self.MULTI_TRIG = self.DMA_BASE + 0x430
         self.CHAIN_ABORT = self.DMA_BASE + 0x444
-        self.ALIAS_CTRL  = self.DMA_CH_BASE + 12
+        self.ALIAS_CTRL  = self.DMA_CH_BASE + 0x10
         self.timer_channel = timer
         self.clock_MUL= clock_MUL
         self.clock_DIV = clock_DIV
@@ -28,7 +28,15 @@ class myDMA:
                 mem32[self.TIMER]= self.clock_MUL << 16 | self.clock_DIV
         
         mem32[self.CTRL_TRIG] = 0
-        mem32[self.CHAIN_ABORT] = 1 << self.channel 
+        self.abort()
+        self.setCtrl(src_inc=True, dst_inc=True,data_size=1,chainTo=None)
+
+
+    
+    def start(self):
+        mem32[self.MULTI_TRIG] =  1 << self.channel
+        
+
 
     def enable(self):
         mem32[self.CTRL_TRIG | 0x2000]= 1
@@ -39,7 +47,7 @@ class myDMA:
         
      
      
-    def setCtrl(self, src_inc=True, dst_inc=True,data_size=1):
+    def setCtrl(self, src_inc=True, dst_inc=True,data_size=1,chainTo=None):
         self.data_size=data_size
         DATA_SIZE = 0
         if data_size == 2:
@@ -53,28 +61,44 @@ class myDMA:
             ctrl += (0x3f << 15)
         else:
             ctrl += ((0x3b + self.timer_channel) << 15)
+            
+        self.chainTo=chainTo
         # chain to
-        ctrl += (self.channel << 11)
+        if chainTo is None:
+            ctrl += (self.channel << 11)
+        else:
+            ctrl += (chainTo << 11)
         if src_inc:
             ctrl += 0x10
         if dst_inc:
             ctrl += 0x20
-        self.ctrl = ctrl
+        self.ctrl = ctrl | 1
         
      
-    def move(self, src_add, dst_add,count,enable=True):
+    def move(self, src_add, dst_add,count,start=False):
         #        mem32[self.CTRL_TRIG] = 0
         #        mem32[self.CHAIN_ABORT] = 1 << self.channel 
         mem32[self.WRITE_ADDR] = dst_add
         mem32[self.READ_ADDR] =  src_add
         mem32[self.TRANS_COUNT] = count // self.data_size
         #/if enable:
-        mem32[self.CTRL_TRIG] = self.ctrl
+        if start:
+            mem32[self.CTRL_TRIG] = self.ctrl | 1
+        else:
+            mem32[self.ALIAS_CTRL] = self.ctrl | 1
         #else:
         #         mem32[self.CTRL_TRIG] = self.ctrl & 0xfffffffe
         
+        
+    def abort(self):
+        mem32[self.CHAIN_ABORT | 0x2000] = 1 << self.channel
+        while(mem32[self.CHAIN_ABORT] & (1 << self.channel)):
+            pass
+        mem32[self.CTRL_TRIG]=0
+        
+        
     def isBusy(self):
-            flag = mem32[self.CTRL_TRIG]
+            flag = mem32[self.ALIAS_CTRL]
             if (flag & 0x80000000) !=  0:
                 return False
             if (flag & ( 1<<24)) == 0:
@@ -93,7 +117,7 @@ if __name__ == "__main__":
    # initialize DMA channel 11 , use timer 3 and set clock to 125MHz/15625 = 8000Hz
     dma = myDMA(11,timer=3,clock_MUL=1, clock_DIV=15625)
     start = time.ticks_us()
-    dma.move(uctypes.addressof(src),uctypes.addressof(dst),tSize)
+    dma.move(uctypes.addressof(src),uctypes.addressof(dst),tSize,start=True)
     end = time.ticks_us() 
 
     print("src= ",src)
