@@ -17,6 +17,10 @@
     
     You need to install the wave.py and chunk.py  from
          https://github.com/joeky888/awesome-micropython-lib/tree/master/Audio
+         
+    ***  be sure to increase the SPI clock speed > 5MHz
+    *** once SDCard is initialize set the spi to an higher clock
+         
     
     How it works,
     
@@ -122,7 +126,6 @@ class wavePlayer:
         self.leftPWM.duty(self.PWM_HALF)
         self.rightPWM.duty(self.PWM_HALF)
 
-
     def play(self,filename):
         # open Audio file and get information
         
@@ -212,13 +215,25 @@ if __name__ == "__main__":
     # mount SDCard
     from machine import SPI,Pin
     sd = SDCard.SDCard(SPI(1),Pin(13))
+    
+    #need to pump up the SPI clock rate
+    # below 3MHz it won't work!
+    sd.init_spi(10_000_000)
     uos.mount(sd,"/sd")
 
     player = wavePlayer()
 
+    waveFolder= "/sd/wave"
+    wavelist = []
+
+    for i in uos.listdir(waveFolder):
+        wavelist.append(waveFolder+"/"+i)
+
     try:
-        # the wave file needs to be stereo and 16 bits
-        player.play("/sd/Luke44.wav")
+        for  i in wavelist:
+            print(i)
+            player.play(i)
+            player.stop()
     except KeyboardInterrupt:
         player.stop()
         

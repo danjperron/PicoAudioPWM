@@ -12,6 +12,7 @@ class myDMA:
         self.READ_ADDR = self.DMA_CH_BASE + 0
         self.WRITE_ADDR = self.DMA_CH_BASE + 4 
         self.TRANS_COUNT = self.DMA_CH_BASE + 8
+        self.ALIAS_TRANS_COUNT = self.DMA_CH_BASE + 0x1C
         self.CTRL_TRIG = self.DMA_CH_BASE + 12
         self.MULTI_TRIG = self.DMA_BASE + 0x430
         self.CHAIN_ABORT = self.DMA_BASE + 0x444
@@ -35,8 +36,6 @@ class myDMA:
     
     def start(self):
         mem32[self.MULTI_TRIG] =  1 << self.channel
-        
-
 
     def enable(self):
         mem32[self.CTRL_TRIG | 0x2000]= 1
@@ -54,7 +53,7 @@ class myDMA:
            DATA_SIZE = 1
         elif data_size == 4:
            DATA_SIZE = 2
-        ctrl = 0
+        ctrl = 1
         ctrl += (DATA_SIZE << 2)
         
         if self.timer_channel is None:
@@ -72,23 +71,19 @@ class myDMA:
             ctrl += 0x10
         if dst_inc:
             ctrl += 0x20
-        self.ctrl = ctrl | 1
-        
+        mem32[self.ALIAS_CTRL] = ctrl
+
      
     def move(self, src_add, dst_add,count,start=False):
         #        mem32[self.CTRL_TRIG] = 0
         #        mem32[self.CHAIN_ABORT] = 1 << self.channel 
         mem32[self.WRITE_ADDR] = dst_add
         mem32[self.READ_ADDR] =  src_add
-        mem32[self.TRANS_COUNT] = count // self.data_size
-        #/if enable:
-        if start:
-            mem32[self.CTRL_TRIG] = self.ctrl | 1
-        else:
-            mem32[self.ALIAS_CTRL] = self.ctrl | 1
-        #else:
-        #         mem32[self.CTRL_TRIG] = self.ctrl & 0xfffffffe
         
+        if start:
+            mem32[self.ALIAS_TRANS_COUNT] = count // self.data_size
+        else:
+            mem32[self.TRANS_COUNT] = count // self.data_size
         
     def abort(self):
         mem32[self.CHAIN_ABORT | 0x2000] = 1 << self.channel

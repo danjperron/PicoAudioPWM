@@ -18,6 +18,9 @@ PWM audio on pico with 8KHz up to 44.1KHz stereo wave file
     You need to install the wave.py and chunk.py from
          https://github.com/joeky888/awesome-micropython-lib/tree/master/Audio
     
+    Don't forget to increase the SPI clock up to 3Mhz.
+
+    
     How it works,
     
        1 - We set the PWM to a range of 255 at 122Khz
