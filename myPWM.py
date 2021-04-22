@@ -33,9 +33,9 @@ class  myPWM(PWM):
         self.duty(self.top // 2)
         
         
-    def deinit(self):
-        super().deinit()
-        _p = Pin(self.id,Pin.IN)
+    #def deinit(self):
+    #    super().deinit()
+    #    _p = Pin(self.id,Pin.IN)
         
     def duty(self, value):
         if value > self.top:

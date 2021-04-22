@@ -45,18 +45,25 @@
         since it is not necessary to convert the binary string it is way faster.
 
 
+    For Headphone
+
     
              2K
     PIO2   -/\/\/-----+-----    headphone left
                       |
-                     === 2200pF
+                     === 0.1uF
                       |
     PIO4   -----------+-----    headphone ground
                       |
-                     === 2200pF
+                     === 0.1uF
               2k      |
     PIO3   -/\/\/-----+-----    headphone right
 
+
+
+    For amplifier don't use PIO4 and the capacitor should be 2200pF and connected to GND. 
+    
+       
 
 
 '''
@@ -112,7 +119,7 @@ def convert2PWM(r0,r1,r2):
 
 
 class wavePlayer:
-    def __init__(self,leftPin=Pin(2,Pin.OUT),rightPin=Pin(3,Pin.OUT), virtualGndPin=Pin(4,Pin.OUT),
+    def __init__(self,leftPin=Pin(2),rightPin=Pin(3), virtualGndPin=Pin(4),
                  dma0Channel=10,dma1Channel=11,dmaTimer=3,pwmBits=10):
         #left channel Pin needs to be an even GPIO Pin number
         #right channel Pin needs to be left channel + 1
@@ -129,7 +136,17 @@ class wavePlayer:
         self.leftPin=leftPin
         self.rightPin=rightPin
         self.virtualGndPin=virtualGndPin
-       
+
+        # set PWM
+        self.leftPWM=myPWM(leftPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
+        self.leftPWM.duty(self.PWM_HALF)
+        self.rightPWM=myPWM(rightPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
+        self.rightPWM.duty(self.PWM_HALF)
+        if not (self.virtualGndPin is None):
+            self.virtualGndPWM=myPWM(self.virtualGndPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
+            self.virtualGndPWM.duty(self.PWM_HALF)
+
+
         # set DMA channel
         self.dma0Channel = dma0Channel
         self.dma1Channel = dma1Channel
@@ -138,10 +155,6 @@ class wavePlayer:
     def stop(self):
         self.dma0.abort()
         self.dma1.abort()
-        self.leftPWM.deinit()
-        self.rightPWM.deinit()
-        if not(self.virtualGndPin is None):
-            self.virtualGndPWM.deinit()
 
     def play(self,filename):
         # open Audio file and get information
@@ -157,16 +170,6 @@ class wavePlayer:
             print("Needs 2 channels")
             return
 
-         # set PWM
-        self.leftPWM=myPWM(self.leftPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
-        self.leftPWM.duty(self.PWM_HALF)
-        self.rightPWM=myPWM(self.rightPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
-        self.rightPWM.duty(self.PWM_HALF)
-        if not (self.virtualGndPin is None):
-            self.virtualGndPWM=myPWM(self.virtualGndPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
-            self.virtualGndPWM.duty(self.PWM_HALF)
-        
-        
         # Set DMA channel and timer rate
         # the divider set the rate at 2Khz (125Mhz//62500)
         # The multiplier  use the sample rate to adjust it correctly
@@ -260,7 +263,7 @@ if __name__ == "__main__":
             
 
     try:
-        for  i in wavelist[8:]:
+        for  i in wavelist:
             print(i)
             player.play(i)
     except KeyboardInterrupt:
