@@ -112,7 +112,7 @@ def convert2PWM(r0,r1,r2):
 
 
 class wavePlayer:
-    def __init__(self,leftPin=Pin(2),rightPin=Pin(3), virtualGndPin=Pin(4),
+    def __init__(self,leftPin=Pin(2,Pin.OUT),rightPin=Pin(3,Pin.OUT), virtualGndPin=Pin(4,Pin.OUT),
                  dma0Channel=10,dma1Channel=11,dmaTimer=3,pwmBits=10):
         #left channel Pin needs to be an even GPIO Pin number
         #right channel Pin needs to be left channel + 1
