@@ -1,44 +1,63 @@
 '''
     (c) 2021  Daniel Perron
-    MIT License 
+    MIT License
 
     example of audio output using PWM and DMA
     right now it  works only with wave file at
     8000 sample rate , stereo and 16 bits
-    
+
     GPIO  2 & 3  pin 4 and 5 are the output
     You need to use headphone with a 1K resistor in series on
     left and right speaker
-    
+
     The myPWM subclass set the maximum count to 255 at a frequency around  122.5KHz.
-    
+
     The myDMA class allow to use direct memory access to transfer each frame at the current sample rate
-    
-    
+
+
     You need to install the wave.py and chunk.py  from
          https://github.com/joeky888/awesome-micropython-lib/tree/master/Audio
          
+    SDCard.py  is available in  https://github.com/micropython/micropython/tree/master/drivers/sdcard
+      please be sure to rename it SDCard.py into the pico lib folder
+    
+
     ***  be sure to increase the SPI clock speed > 5MHz
     *** once SDCard is initialize set the spi to an higher clock
-         
-    
+
+
     How it works,
-    
+
        1 - We set the PWM  to a range of 255, 1023 for 10 bits, at 122Khz
        2 - We read the wave file using the class wave which will set the sample rate and read the audio data by chunk
        3 - Each chunk are converted to  16 bit signed to  unsigned char with the middle at 128
        4 - Wait for the DMA to be completed.  On first it will be anyway.
        4 - The converted chunk is then pass to the DMA to be transfer at the sample rate using one of build-in timer
        6 - Go on step 2 until is done.
-       
+
     P.S. to transfer wave file  use rshell.
-    
-    April 20 
+
+    April 20
     Version 0.1
 
     ---  Add DMA chainning. This removes the glitch betweem DMA transfer
     ---  assembly function convert2PWM replace  the struct pack and compack
         since it is not necessary to convert the binary string it is way faster.
+
+
+    
+             2K
+    PIO2   -/\/\/-----+-----    headphone left
+                      |
+                     === 2200pF
+                      |
+    PIO4   -----------+-----    headphone ground
+                      |
+                     === 2200pF
+              2k      |
+    PIO3   -/\/\/-----+-----    headphone right
+
+
 
 '''
 import wave
@@ -55,6 +74,7 @@ from machine import Pin
 #then r2 hold data reference by r0
 #r3 = 32768 to convert (-32768..32767) to (0..65535)
 #r4 hold 255 or 1023 (8 or 10 bits)
+#r5  hold /64  or /256 ( 6 or 8 bit shift)
 @micropython.asm_thumb
 def convert2PWM(r0,r1,r2):
     #r3=32768
@@ -65,7 +85,7 @@ def convert2PWM(r0,r1,r2):
     mov(r4,255)
     cmp(r2,10)
     bne(PWM8BITS)
-    #ok we are 11 bits
+    #ok we are 10 bits
     # set r4 for 1023
     lsl(r4,r4,2)
     add(r4,r4,3)
@@ -92,7 +112,7 @@ def convert2PWM(r0,r1,r2):
 
 
 class wavePlayer:
-    def __init__(self,leftPin=Pin(2),rightPin=Pin(3),
+    def __init__(self,leftPin=Pin(2),rightPin=Pin(3), virtualGndPin=Pin(4),
                  dma0Channel=10,dma1Channel=11,dmaTimer=3,pwmBits=10):
         #left channel Pin needs to be an even GPIO Pin number
         #right channel Pin needs to be left channel + 1
@@ -108,34 +128,41 @@ class wavePlayer:
 
         self.leftPin=leftPin
         self.rightPin=rightPin
-        
+        self.virtualGndPin=virtualGndPin
+
         # set PWM
         self.leftPWM=myPWM(leftPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
         self.leftPWM.duty(self.PWM_HALF)
         self.rightPWM=myPWM(rightPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
         self.rightPWM.duty(self.PWM_HALF)
-        
+        if not (self.virtualGndPin is None):
+            self.virtualGndPWM=myPWM(self.virtualGndPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
+            self.virtualGndPWM.duty(self.PWM_HALF)
+
+
         # set DMA channel
         self.dma0Channel = dma0Channel
         self.dma1Channel = dma1Channel
         self.dmaTimer = dmaTimer
-        
+
     def stop(self):
         self.dma0.abort()
         self.dma1.abort()
-        self.leftPWM.duty(self.PWM_HALF)
-        self.rightPWM.duty(self.PWM_HALF)
+        self.leftPWM.deinit()
+        self.rightPWM.deinit()
+        if not(self.virtualGndPin is None):
+            self.virtualGndPWM.deinit()
 
     def play(self,filename):
         # open Audio file and get information
-        
+
         f = wave.open(filename,'rb')
 
         rate = f.getframerate()
-        bytesDepth = f.getsampwidth() 
+        bytesDepth = f.getsampwidth()
         channels = f.getnchannels()
         frameCount = f.getnframes()
-        
+
         if channels != 2:
             print("Needs 2 channels")
             return
@@ -146,7 +173,7 @@ class wavePlayer:
         if rate == 44100:
             self.dma0 = myDMA(self.dma0Channel,timer=self.dmaTimer,clock_MUL= 15, clock_DIV=42517)
         else:
-            self.dma0 = myDMA(self.dma0Channel,timer=self.dmaTimer,clock_MUL= rate // 2000, clock_DIV=62500) 
+            self.dma0 = myDMA(self.dma0Channel,timer=self.dmaTimer,clock_MUL= rate // 2000, clock_DIV=62500)
         self.dma1 = myDMA(self.dma1Channel,timer=self.dmaTimer)  # don't need to set  timer clock
 
         # specify number of frame per chunk
@@ -174,7 +201,7 @@ class wavePlayer:
                 t1 = f.readframes(nbFrame)
                 convert2PWM(uctypes.addressof(t1), nbData,self.pwmBits)
                 self.dma1.move(uctypes.addressof(t1),self.leftPWM.PWM_CC,nbFrame*4)
-                # check if previous DMA is done    
+                # check if previous DMA is done
                 while self.dma0.isBusy():
                      pass
                 # start DMA.
@@ -186,7 +213,7 @@ class wavePlayer:
                 t0 = f.readframes(nbFrame)
                 convert2PWM(uctypes.addressof(t0), nbData,self.pwmBits)
                 self.dma0.move(uctypes.addressof(t0),self.leftPWM.PWM_CC,nbFrame*4)
-                # check if previous DMA is done    
+                # check if previous DMA is done
                 while self.dma1.isBusy():
                      pass
             toggle = not toggle
@@ -202,9 +229,8 @@ class wavePlayer:
             while self.dma1.isBusy():
                 pass
             self.dma1.pause()
-        f.close()    
-        self.leftPWM.duty(self.PWM_HALF)
-        self.rightPWM.duty(self.PWM_HALF)
+        f.close()
+        self.stop()
 
 
 if __name__ == "__main__":
@@ -215,28 +241,27 @@ if __name__ == "__main__":
     # mount SDCard
     from machine import SPI,Pin
     sd = SDCard.SDCard(SPI(1),Pin(13))
-    
+
     #need to pump up the SPI clock rate
     # below 3MHz it won't work!
-    sd.init_spi(10_000_000)
+    sd.init_spi(50_000_000)
     uos.mount(sd,"/sd")
 
     player = wavePlayer()
 
-    waveFolder= "/sd/wave"
+    waveFolder= "/sd/Wendy"
     wavelist = []
 
     for i in uos.listdir(waveFolder):
-        wavelist.append(waveFolder+"/"+i)
+        if i.find(".wav")>=0:
+            wavelist.append(waveFolder+"/"+i)
+        elif i.find(".WAV")>=0:
+            wavelist.append(waveFolder+"/"+i)
+            
 
     try:
-        for  i in wavelist:
+        for  i in wavelist[8:]:
             print(i)
             player.play(i)
-            player.stop()
     except KeyboardInterrupt:
         player.stop()
-        
-        
-    
-    

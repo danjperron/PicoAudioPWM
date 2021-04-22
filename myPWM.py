@@ -32,6 +32,11 @@ class  myPWM(PWM):
         mem32[self.PWM_TOP] =  self.top
         self.duty(self.top // 2)
         
+        
+    def deinit(self):
+        super().deinit()
+        _p = Pin(self.id,Pin.IN)
+        
     def duty(self, value):
         if value > self.top:
             value = self.top
