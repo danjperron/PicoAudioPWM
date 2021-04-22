@@ -129,17 +129,7 @@ class wavePlayer:
         self.leftPin=leftPin
         self.rightPin=rightPin
         self.virtualGndPin=virtualGndPin
-
-        # set PWM
-        self.leftPWM=myPWM(leftPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
-        self.leftPWM.duty(self.PWM_HALF)
-        self.rightPWM=myPWM(rightPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
-        self.rightPWM.duty(self.PWM_HALF)
-        if not (self.virtualGndPin is None):
-            self.virtualGndPWM=myPWM(self.virtualGndPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
-            self.virtualGndPWM.duty(self.PWM_HALF)
-
-
+       
         # set DMA channel
         self.dma0Channel = dma0Channel
         self.dma1Channel = dma1Channel
@@ -167,6 +157,16 @@ class wavePlayer:
             print("Needs 2 channels")
             return
 
+         # set PWM
+        self.leftPWM=myPWM(self.leftPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
+        self.leftPWM.duty(self.PWM_HALF)
+        self.rightPWM=myPWM(self.rightPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
+        self.rightPWM.duty(self.PWM_HALF)
+        if not (self.virtualGndPin is None):
+            self.virtualGndPWM=myPWM(self.virtualGndPin,divider=self.PWM_DIVIDER,top=self.PWM_TOP)
+            self.virtualGndPWM.duty(self.PWM_HALF)
+        
+        
         # Set DMA channel and timer rate
         # the divider set the rate at 2Khz (125Mhz//62500)
         # The multiplier  use the sample rate to adjust it correctly
