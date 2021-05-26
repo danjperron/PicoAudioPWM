@@ -4,15 +4,15 @@
 
     example of audio output using PWM and DMA
     right now it  works only with wave file at
-    8000 sample rate , stereo and 16 bits
+    8000 sample rate , stereo or mono, and 16 bits audio
 
     GPIO  2 & 3  pin 4 and 5 are the output
-    You need to use headphone with a 1K resistor in series on
+    You need to use headphones with a 1K resistor in series on
     left and right speaker
 
-    The myPWM subclass set the maximum count to 255 at a frequency around  122.5KHz.
+    The myPWM subclass sets the maximum count to 255 at a frequency around  122.5KHz.
 
-    The myDMA class allow to use direct memory access to transfer each frame at the current sample rate
+    The myDMA class allows to use direct memory access to transfer each frame at the current sample rate
 
 
     You need to install the wave.py and chunk.py  from
@@ -23,29 +23,30 @@
     
 
     ***  be sure to increase the SPI clock speed > 5MHz
-    *** once SDCard is initialize set the spi to an higher clock
+    ***  once SDCard is initialize set the spi to an higher clock
 
 
     How it works,
 
        1 - We set the PWM  to a range of 255, 1023 for 10 bits, at 122Khz
        2 - We read the wave file using the class wave which will set the sample rate and read the audio data by chunk
-       3 - Each chunk are converted to  16 bit signed to  unsigned char with the middle at 128
-       4 - Wait for the DMA to be completed.  On first it will be anyway.
-       4 - The converted chunk is then pass to the DMA to be transfer at the sample rate using one of build-in timer
-       6 - Go on step 2 until is done.
+       3 - Mono files are converted to stereo by duplicating the original audio samples
+       4 - Each chunk are converted to  16 bit signed to unsigned char with the middle at 128
+       5 - Wait for the DMA to be completed.  On first it will be anyway.
+       6 - The converted chunk is then passed to the DMA to be transfered at the sample rate using one of built-in timer
+       7 - Go on step 2 until is done.
 
-    P.S. to transfer wave file  use rshell.
+    P.S. use rshell to transfer wave files to the Pico file system
 
     April 20
     Version 0.1
-
     ---  Add DMA chainning. This removes the glitch betweem DMA transfer
     ---  assembly function convert2PWM replace  the struct pack and compack
         since it is not necessary to convert the binary string it is way faster.
+    Version 0.2
+    ---  Add mono audio file handling
 
-
-    For Headphone
+    For Headphones
 
     
              2K
@@ -117,6 +118,28 @@ def convert2PWM(r0,r1,r2):
     sub(r1,1)
     bgt(loop)
 
+pass
+@micropython.asm_thumb
+def interleavebytes(r0,r1,r2):
+#r0 MONO wav audio buffer address
+#r1 Stereo wav audio ouput buffer address
+#r2 number of halfwords (16 bit audio samples) from MONO buffer to convert
+
+    label(loop)
+    # get 16 bit data
+    ldrh(r3,[r0,0])
+    # copy over
+    strh(r3,[r1,0])
+    add(r1,2)
+    # and duplicate for second channel
+    strh(r3,[r1,0])
+    # point to next audio data halfword
+    add(r1,2)
+    add(r0,2)
+    # decrement counter and loop unless zero
+    sub(r2,1)
+    bgt(loop)
+
 
 class wavePlayer:
     def __init__(self,leftPin=Pin(2),rightPin=Pin(3), virtualGndPin=Pin(4),
@@ -152,6 +175,7 @@ class wavePlayer:
         self.dma1Channel = dma1Channel
         self.dmaTimer = dmaTimer
 
+
     def stop(self):
         self.dma0.abort()
         self.dma1.abort()
@@ -166,10 +190,14 @@ class wavePlayer:
         channels = f.getnchannels()
         frameCount = f.getnframes()
 
-        if channels != 2:
-            print("Needs 2 channels")
-            return
-
+        # set number of Frames/chunk and DMAunitSize for Stereo samples
+        DMAunitSize = 4
+        nbFrame = 2048
+        # adjust down if 1 channel (mono)
+        if channels == 1:
+            nbFrame=1024
+        #number of 16bit audio chunks per Frame
+        nbData = nbFrame*2
         # Set DMA channel and timer rate
         # the divider set the rate at 2Khz (125Mhz//62500)
         # The multiplier  use the sample rate to adjust it correctly
@@ -179,31 +207,32 @@ class wavePlayer:
             self.dma0 = myDMA(self.dma0Channel,timer=self.dmaTimer,clock_MUL= rate // 2000, clock_DIV=62500)
         self.dma1 = myDMA(self.dma1Channel,timer=self.dmaTimer)  # don't need to set  timer clock
 
-        # specify number of frame per chunk
-        nbFrame=2048
+        #setup DMA   chain dma0 to dma1 and vice versa
+        self.dma0.setCtrl(src_inc=True, dst_inc=False,data_size=DMAunitSize,chainTo=self.dma1.channel)
+        self.dma1.setCtrl(src_inc=True, dst_inc=False,data_size=DMAunitSize,chainTo=self.dma0.channel)
 
-        # need to alternate DMA buffer us a toggle flag
+        # need to alternate DMA buffer using a toggle flag
         toggle = True
         # need to start first frame
         First = True
-
         # loop until is done
         frameLeft = frameCount
-        #setup DMA   chain dma0 to dma1 and vice versa
-        self.dma0.setCtrl(src_inc=True, dst_inc=False,data_size=4,chainTo=self.dma1.channel)
-        self.dma1.setCtrl(src_inc=True, dst_inc=False,data_size=4,chainTo=self.dma0.channel)
 
-        First = True
         while frameLeft>0:
-            # first DMA
+         # first DMA
             if frameLeft < nbFrame:
                 nbFrame = frameLeft
-            nbData = nbFrame * 2
-
+                nbData = nbFrame*2
             if toggle:
                 t1 = f.readframes(nbFrame)
+#--- Duplicate mono audio samples to simulate stereo sound (on both channels)
+                if channels ==1:
+                    t3 = bytearray(4096)
+                    interleavebytes(uctypes.addressof(t1),uctypes.addressof(t3),nbFrame)
+                    t1=t3
+#--- make t1 stereo data to PWM compatible
                 convert2PWM(uctypes.addressof(t1), nbData,self.pwmBits)
-                self.dma1.move(uctypes.addressof(t1),self.leftPWM.PWM_CC,nbFrame*4)
+                self.dma1.move(uctypes.addressof(t1),self.leftPWM.PWM_CC,nbFrame*DMAunitSize)
                 # check if previous DMA is done
                 while self.dma0.isBusy():
                      pass
@@ -214,8 +243,14 @@ class wavePlayer:
                   First = False
             else:
                 t0 = f.readframes(nbFrame)
+#--- Duplicate mono audio samples to simulate stereo sound (on both channels)
+                if channels == 1:
+                    t3 = bytearray(4096)
+                    interleavebytes(uctypes.addressof(t0),uctypes.addressof(t3),nbFrame)
+                    t0=t3
+#--- make t0 stereo data to PWM compatible
                 convert2PWM(uctypes.addressof(t0), nbData,self.pwmBits)
-                self.dma0.move(uctypes.addressof(t0),self.leftPWM.PWM_CC,nbFrame*4)
+                self.dma0.move(uctypes.addressof(t0),self.leftPWM.PWM_CC,nbFrame*DMAunitSize)
                 # check if previous DMA is done
                 while self.dma1.isBusy():
                      pass
