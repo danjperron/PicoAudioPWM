@@ -53,22 +53,25 @@ class myDMA:
            DATA_SIZE = 1
         elif data_size == 4:
            DATA_SIZE = 2
+        #SET EN (DMA Channel Enable)
         ctrl = 1
+        #SET DATA_SIZE (size of each DMA bus transfer)
         ctrl += (DATA_SIZE << 2)
-        
+        #SET TREQ_SEL (DMA Transfer Request Signal)
         if self.timer_channel is None:
-            ctrl += (0x3f << 15)
+            ctrl += (0x3f << 15)      #- Unpaced Request
         else:
-            ctrl += ((0x3b + self.timer_channel) << 15)
-            
+            ctrl += ((0x3b + self.timer_channel) << 15)  #TIMER paced Request
+        #SET CHAIN_TO (DMA channel completion trigger another channel)    
         self.chainTo=chainTo
-        # chain to
         if chainTo is None:
-            ctrl += (self.channel << 11)
+            ctrl += (self.channel << 11)  #- 
         else:
             ctrl += (chainTo << 11)
+        #SET INCR_READ (DMA read address incremented after each bus cycle ???)
         if src_inc:
             ctrl += 0x10
+        #SET INCR_WRITE (DMA write address incremented after each bus cycle ???)
         if dst_inc:
             ctrl += 0x20
         mem32[self.ALIAS_CTRL] = ctrl
