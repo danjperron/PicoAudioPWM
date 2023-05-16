@@ -3,7 +3,13 @@ from machine import PWM,Pin,mem32
 
 class  myPWM(PWM):
     def __init__(self,pin,divider=8,top=255):
-        self.id = int(str(pin)[4:-1].split(',')[0])
+        #ok check from new micropython
+        #gpio id is now GPIOx instead of x
+        pinstr = str(pin).split(',')[0]
+        if pinstr.upper().find('GPIO') >=0 :
+            self.id = int(pinstr[8:])
+        else    
+            self.id = int(pinstr[4:])
         self.A_B = self.id & 1
         self.channel = self.id >> 1
         self.divider = divider
