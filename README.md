@@ -35,3 +35,5 @@ PWM audio on pico with 8KHz up to 44.1KHz stereo wave file
        6 - Go on step 2 until is done.
        
     P.S. to transfer wave file use rshell.
+
+youtube example https://www.youtube.com/watch?v=dgIQz5uy2vA
