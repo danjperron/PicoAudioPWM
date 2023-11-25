@@ -8,7 +8,7 @@ class  myPWM(PWM):
         pinstr = str(pin).split(',')[0]
         if pinstr.upper().find('GPIO') >=0 :
             self.id = int(pinstr[8:])
-        else    
+        else :
             self.id = int(pinstr[4:])
         self.A_B = self.id & 1
         self.channel = self.id >> 1
